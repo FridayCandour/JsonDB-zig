@@ -35,25 +35,24 @@ const Place = struct {
 };
 
 const x = Place{
-  .lat = 514,
-  .long = -0.7,
+    .lat = 514,
+    .long = -0.7,
 };
- 
 
 test " serialization " {
-var buf: [100]u8 = undefined;
-var fba = std.heap.FixedBufferAllocator.init(&buf);
-var string = std.ArrayList(u8).init(fba.allocator());
-try std.json.stringify(x, .{}, string.writer());
-       std.debug.print("\n {s}", .{buf});
-    const a =   std.json.validate(&buf);
-       std.debug.print("\n {?}", .{a});
+    var buf: [100]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buf);
+    var string = std.ArrayList(u8).init(fba.allocator());
+    try std.json.stringify(x, .{}, string.writer());
+    std.debug.print("\n {s}", .{string.items});
+    const a = std.json.validate(string.items);
+    std.debug.print("\n {?}", .{a});
 
- var stream = std.json.TokenStream.init(&buf);
-const parsedData = try std.json.parse(Place, &stream, .{});
-  std.debug.print("\n ", .{});
-  std.debug.print("\n {any}", .{parsedData});
-  std.debug.print("\n ", .{});
+    var stream = std.json.TokenStream.init(string.items);
+    const parsedData = try std.json.parse(Place, &stream, .{});
+    std.debug.print("\n ", .{});
+    std.debug.print("\n {any}", .{parsedData});
+    std.debug.print("\n ", .{});
 }
 
 // test " deserialization " {
