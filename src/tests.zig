@@ -2,10 +2,10 @@ const std = @import("std");
 const expect = std.testing.expect;
 
 // test "detect leak" {
-// var list = std.ArrayList(u21).init(std.testing.allocator);
+// var list = std.ArrayList(u21).init(std.allocator);
 // defer list.deinit();
 // try list.append('☔');
-// try std.testing.expect(list.items.len == 1);
+// try std.expect(list.items.len == 1);
 //  }
 
 //  test "coerce to optionals" {
@@ -29,33 +29,33 @@ const expect = std.testing.expect;
 //     _ = my_vector;
 // }
 
-const Place = struct {
-    lat: f64,
-    long: f64,
-};
+// const Place = struct {
+//     lat: u64,
+//     long: u64,
+// };
 
-const x = Place{
-    .lat = 514,
-    .long = -0.7,
-};
+// const x = Place{
+//     .lat = 514,
+//     .long = 7,
+// };
 
-test " serialization " {
-    // var buf: [100]u8 = undefined;
-    var fba = std.testing.allocator;
-    // , string.writer()
-    // var string = std.ArrayList(u8).init(fba.allocator());
-    const a = std.json.stringifyAlloc(fba,x, .{});
-    std.debug.print("\n {any}", .{a});
-    // const a = std.json.validate(string.items);
-    // std.debug.print("\n {?}", .{a});
+// test " serialization " {
+    
+//     // serialisation
+//     var fba = std.allocator;
+//     const a = try std.json.stringifyAlloc(fba,x, .{});
+//     std.debug.print("\n {any}", .{a});
 
-    // var stream = std.json.TokenStream.init(string.items);
-    // const parsedData = try std.json.parse(Place, &stream, .{});
-    // std.debug.print("\n ", .{});
-    // std.debug.print("\n {any}", .{parsedData});
-    // std.debug.print("\n ", .{});
-    defer std.testing.allocator.free(a);
-}
+//     // desirialisation
+//     var stream = std.json.TokenStream.init(a);
+//     const parsedData = try std.json.parse(Place, &stream, .{});
+//     std.debug.print("\n ", .{});
+//     std.debug.print("\n {any}", .{parsedData});
+//     std.debug.print("\n ", .{});
+
+//     // freeing allocated memory 
+//     defer std.allocator.free(a);
+// }
 
 // test " deserialization " {
 // const Foo = struct { a: i32, b: bool };
@@ -70,3 +70,44 @@ test " serialization " {
 //   std.debug.print("\n {any}", .{parsedData});
 //   std.debug.print("\n ", .{});
 // }
+
+    // var buf: [100]u8 = undefined;
+    // var string = std.ArrayList(u8).init(fba.allocator());
+    // , string.writer()
+    // const b = std.json.validate(a);
+    // std.debug.print("\n {any}", .{b});
+const mem = std.mem;
+ const Type = std.builtin.Type;
+
+    pub fn fields(comptime T: type) switch (@typeInfo(T)) {
+    .Struct => []const Type.StructField,
+    .Union => []const Type.UnionField,
+    .ErrorSet => []const Type.Error,
+    .Enum => []const Type.EnumField,
+    else => @compileError("Expected struct, union, error set or enum type, found '" ++ @typeName(T) ++ "'"),
+} {
+    return switch (@typeInfo(T)) {
+        .Struct => |info| info.fields,
+        .Union => |info| info.fields,
+        .Enum => |info| info.fields,
+        .ErrorSet => |errors| errors.?, // must be non global error set
+        else => @compileError("Expected struct, union, error set or enum type, found '" ++ @typeName(T) ++ "'"),
+    };
+}
+
+test "std.meta.fields" {
+    const E1 = struct {
+        A: u64,
+        B: u64,
+    };
+    const e1 = E1{
+        .A = 1,
+        .B = 2,
+    };
+    const e1f = comptime fields(E1);
+    std.debug.print("\n", .{});
+    inline for (e1f) |er| {
+    std.debug.print("\n key is {s} and value is {}", .{er.name,@field(e1, er.name)});
+    } 
+    std.debug.print("\n", .{});
+    }
