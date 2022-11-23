@@ -49,19 +49,20 @@ fn JsonDB(comptime DBUnit: type) type {
             var item = self.map.get(id) orelse return;
             const e1f = comptime fields(DBUnit);
             std.debug.print("\n DBunit len is {any}", .{e1f.len});
+            std.debug.print("\n DBunit len is {any}", .{e1f});
+
             inline for (e1f) |er| {
                 if (comptime std.mem.eql(u8, er.name, "id")) {
                     continue;
                 }
-             std.debug.print("\n --- {s} {?s}", .{er.name, @field(item, er.name)});
-             std.debug.print("\n --- {s} {?s}", .{er.name, @field(v, er.name)});
+                std.debug.print("\n --- {s} {?s}", .{ er.name, @field(item, er.name) });
+                std.debug.print("\n --- {s} {?s}", .{ er.name, @field(v, er.name) });
                 if (@field(v, er.name)) |val| {
                     std.debug.print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
                     @field(item, er.name) = val;
-                    std.debug.print("\n updated as {any}", .{ @field(item, er.name) });
-
+                    std.debug.print("\n updated as {any}", .{@field(item, er.name)});
                 }
-            std.debug.print("\n ", .{});
+                std.debug.print("\n ", .{});
                 return self.map.put(id, item);
             }
         }
@@ -98,7 +99,6 @@ pub fn main() !void {
     //         .name = "hello",
     //         .age = 12
     //     });
-
 
     //    try store.set(.{
     //         .id = 13,
