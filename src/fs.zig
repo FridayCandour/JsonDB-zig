@@ -5,3 +5,13 @@ fn fsWriter (name: []const u8) {
     }
 
 }
+
+pub const DBserver = struct {
+    fn saveToDisk() {
+const file = std.cwd().openFile()
+    }
+
+    fn getFromDisk() {
+
+    }
+}

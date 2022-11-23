@@ -48,9 +48,7 @@ fn JsonDB(comptime DBUnit: type) type {
             const id = v.id;
             var item = self.map.get(id) orelse return;
             const e1f = comptime fields(DBUnit);
-            std.debug.print("\n {any}", .{e1f.len});
-            std.debug.print("\n {any}", .{0});
-            
+            std.debug.print("\n DBunit len is {any}", .{e1f.len});
             inline for (e1f) |er| {
                 if (comptime std.mem.eql(u8, er.name, "id")) {
                     continue;
@@ -63,6 +61,7 @@ fn JsonDB(comptime DBUnit: type) type {
                     std.debug.print("\n updated as {any}", .{ @field(item, er.name) });
 
                 }
+            std.debug.print("\n ", .{});
                 return self.map.put(id, item);
             }
         }
@@ -100,12 +99,6 @@ pub fn main() !void {
     //         .age = 12
     //     });
 
-    try store.set(.{
-        .id = 13,
-        .age = 22,
-        .name = "hello",
-        .title = "Be 3p1c h4x0r",
-    });
 
     //    try store.set(.{
     //         .id = 13,
@@ -113,8 +106,12 @@ pub fn main() !void {
     //     });
 
     // store.print();
+    try store.set(.{
+        .id = 13,
+        .age = 22,
+    });
     try store.update(.{ .id = 13, .age = 12 });
-    store.print();
+    // store.print();
     // try store.update(.{ .id = 13, .age = 12, .name = "hello", .title = "Be 3p1c h4x0r", .isAdult = true });
     // store.print();
 }
