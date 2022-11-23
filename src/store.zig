@@ -49,9 +49,10 @@ fn JsonDB(comptime DBUnit: type) type {
             var item = self.map.get(id) orelse return;
             const e1f = comptime fields(DBUnit);
             std.debug.print("\n DBunit len is {any}", .{e1f.len});
-            std.debug.print("\n DBunit len is {any}", .{e1f});
+            // std.debug.print("\n DBunit len is {any}", .{e1f});
 
             inline for (e1f) |er| {
+                std.debug.print("\n field is {s} ", .{ er.name });
                 if (comptime std.mem.eql(u8, er.name, "id")) {
                     continue;
                 }
