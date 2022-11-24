@@ -52,20 +52,21 @@ fn JsonDB(comptime DBUnit: type) type {
             // std.debug.print("\n DBunit len is {any}", .{e1f});
 
             inline for (e1f) |er| {
-                std.debug.print("\n field is {s} ", .{ er.name });
+                std.debug.print("\n field is {s} ", .{er.name});
                 if (comptime std.mem.eql(u8, er.name, "id")) {
                     continue;
                 }
-                std.debug.print("\n --- {s} {?s}", .{ er.name, @field(item, er.name) });
-                std.debug.print("\n --- {s} {?s}", .{ er.name, @field(v, er.name) });
+
+                std.debug.print("\n --- {s} {?any}", .{ er.name, @field(item, er.name) });
+                std.debug.print("\n --- {s} {?any}", .{ er.name, @field(v, er.name) });
                 if (@field(v, er.name)) |val| {
                     std.debug.print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
                     @field(item, er.name) = val;
                     std.debug.print("\n updated as {any}", .{@field(item, er.name)});
                 }
                 std.debug.print("\n ", .{});
-                return self.map.put(id, item);
             }
+            return self.map.put(id, item);
         }
         fn print(self: *Self) void {
             var it = self.map.iterator();
