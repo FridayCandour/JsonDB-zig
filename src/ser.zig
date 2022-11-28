@@ -43,7 +43,6 @@ pub fn main() !void {
   const struc =  try fromJson(str, alloc);
     defer std.json.parseFree(Todo, struc, .{.allocator= alloc});
     print("\n ", .{});
-    print("\n {any}", .{struc});
     log(struc);
     print("\n ", .{});
     print("\n ", .{});
