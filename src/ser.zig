@@ -31,7 +31,6 @@ const todo = Todo{
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    //  defer gpa.deinit();
     defer std.debug.assert(!gpa.deinit());
     const alloc = gpa.allocator();
     const str = try toJson(todo, alloc);
@@ -45,6 +44,7 @@ pub fn main() !void {
     defer std.json.parseFree(Todo, struc, .{.allocator= alloc});
     print("\n ", .{});
     print("\n {any}", .{struc});
+    log(struc);
     print("\n ", .{});
     print("\n ", .{});
 }
