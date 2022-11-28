@@ -1,8 +1,9 @@
 const std = @import("std");
 const print = std.debug.print;
 const fields = std.meta.fields;
-const log = @import("mixins.zig").log;
-const Log = @import("mixins.zig").Log;
+const ZigLogger = @import("logger.zig/src/main.zig");
+const Logger = ZigLogger.Logger;
+const log = ZigLogger.log;
 
 const Todo = struct {
     id: u64,
@@ -74,7 +75,7 @@ fn JsonDB(comptime DBUnit: type) type {
                 const logr = struct {
                     id: u64,
                     data: *DBUnit,
-                    pub usingnamespace Log(@This());
+                    pub usingnamespace Logger(.{});
                 };
 
                 var data: logr = .{
@@ -84,9 +85,8 @@ fn JsonDB(comptime DBUnit: type) type {
 
                 std.debug.print("\n", .{});
                 data.log();
-                // log(@TypeOf(item.value_ptr));
-                // log(item.value_ptr);
-                // log(data.data);
+                log(@TypeOf(item.value_ptr));
+                log(item.value_ptr);
                 std.debug.print("\n", .{});
                 std.debug.print("\n", .{});
             }
