@@ -2,6 +2,7 @@ const std = @import("std");
 const print = std.debug.print;
 const fields = std.meta.fields;
 const log = @import("mixins.zig").log;
+const Log = @import("mixins.zig").Log;
 
 const Todo = struct {
     id: u64,
@@ -50,15 +51,12 @@ fn JsonDB(comptime DBUnit: type) type {
             const e1f = comptime fields(DBUnit);
             std.debug.print("\n DBunit len is {any}", .{e1f.len});
             // std.debug.print("\n DBunit len is {any}", .{e1f});
-
+            // std.debug.print("\n field is {s} ", .{er.name});
             inline for (e1f) |er| {
-                std.debug.print("\n field is {s} ", .{er.name});
                 if (comptime std.mem.eql(u8, er.name, "id")) {
                     continue;
                 }
-
-                std.debug.print("\n --- {s} {?any}", .{ er.name, @field(item, er.name) });
-                std.debug.print("\n --- {s} {?any}", .{ er.name, @field(v, er.name) });
+                std.debug.print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
                 if (@field(v, er.name)) |val| {
                     std.debug.print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
                     @field(item, er.name) = val;
@@ -66,6 +64,8 @@ fn JsonDB(comptime DBUnit: type) type {
                 }
                 std.debug.print("\n ", .{});
             }
+            std.debug.print("\n updated => {any}", .{item});
+            std.debug.print("\n ", .{});
             return self.map.put(id, item);
         }
         fn print(self: *Self) void {
@@ -74,15 +74,20 @@ fn JsonDB(comptime DBUnit: type) type {
                 const logr = struct {
                     id: u64,
                     data: *DBUnit,
+                    pub usingnamespace Log(@This());
                 };
-                const data: logr = .{
+
+                var data: logr = .{
                     .id = item.value_ptr.id,
                     .data = item.value_ptr,
                 };
+
                 std.debug.print("\n", .{});
-                log(@TypeOf(item.value_ptr));
+                data.log();
+                // log(@TypeOf(item.value_ptr));
                 // log(item.value_ptr);
-                log(data.data);
+                // log(data.data);
+                std.debug.print("\n", .{});
                 std.debug.print("\n", .{});
             }
         }
@@ -111,9 +116,11 @@ pub fn main() !void {
     try store.set(.{
         .id = 13,
         .age = 22,
+        .name = "friday",
+        .isAdult = true,
     });
-    try store.update(.{ .id = 13, .age = 12 });
+    // try store.update(.{ .id = 13, .age = 12 });
     // store.print();
     // try store.update(.{ .id = 13, .age = 12, .name = "hello", .title = "Be 3p1c h4x0r", .isAdult = true });
-    // store.print();
+    store.print();
 }

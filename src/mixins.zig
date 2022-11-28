@@ -84,7 +84,7 @@ pub fn log(x: anytype) void {
     return logAny(x, 1);
 }
 
-fn Log(comptime Self: type) type {
+pub fn Log(comptime Self: type) type {
     return struct {
         pub fn log(self: Self) void {
             return logAny(self, 1);
@@ -100,7 +100,6 @@ const SadStruct = struct {
 const Thing = struct {
     that: SadStruct,
     this: SadStruct,
-
     pub usingnamespace Log(@This());
 };
 

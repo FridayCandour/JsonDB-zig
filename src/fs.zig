@@ -3,7 +3,6 @@ fn fsWriter (name: []const u8) {
    sts.fs.cwd().openFile(name, .{} )
    file.writer().writeStuct(value)
     }
-
 }
 
 pub const DBserver = struct {
