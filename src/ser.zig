@@ -5,34 +5,16 @@ const ZigLogger = @import("logger.zig/src/main.zig");
 const Logger = ZigLogger.Logger;
 const log = ZigLogger.log;
 
-fn toJson(comptime x: Todo) ![]const u8 {
+fn toJson(comptime x: Todo, fba: std.mem.Allocator) ![]const u8 {
     // serialisation
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-    var fba = allocator;
     const a = try std.json.stringifyAlloc(fba, x, .{});
-    // std.debug.print("\n {s}", .{a});
-    // std.debug.print("\n ", .{});
-    // std.debug.print("\n ", .{});
     return a;
 }
-
-fn fromJson(comptime x: type, comptime typ: type) !void {
-    // serialisation
-    // var fba = std.testing.allocator;
-    // const a = try std.json.stringifyAlloc(fba,x, .{});
-    // std.debug.print("\n {any}", .{a});
-
+fn fromJson( x: []const u8,fba: std.mem.Allocator) !Todo {
     // desirialisation
     var stream = std.json.TokenStream.init(x);
-    const parsedData = try std.json.parse(typ, &stream, .{});
-    std.debug.print("\n ", .{});
-    std.debug.print("\n {any}", .{parsedData});
-    std.debug.print("\n ", .{});
-
-    // // freeing allocated memory
-    // defer std.testing.allocator.free(a);
+    const parsedData = try std.json.parse(Todo, &stream, .{.allocator= fba});
+    return parsedData;
 }
 
 const Todo = struct {
@@ -48,9 +30,20 @@ const todo = Todo{
 };
 
 pub fn main() !void {
-    const str = try toJson(todo);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    //  defer gpa.deinit();
+    defer std.debug.assert(!gpa.deinit());
+    const fba = gpa.allocator();
+    const str = try toJson(todo, fba);
+    defer fba.free(str);
     print("\n ", .{});
     print("\n {s}", .{str});
+    print("\n ", .{});
+    print("\n ", .{});
+
+  const struc =  try fromJson(str, fba);
+    print("\n ", .{});
+    print("\n {any}", .{struc});
     print("\n ", .{});
     print("\n ", .{});
 }
