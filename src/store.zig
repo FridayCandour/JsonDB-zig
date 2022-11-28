@@ -50,22 +50,21 @@ fn JsonDB(comptime DBUnit: type) type {
             const id = v.id;
             var item = self.map.get(id) orelse return;
             const e1f = comptime fields(DBUnit);
-            std.debug.print("\n DBunit len is {any}", .{e1f.len});
-            // std.debug.print("\n DBunit len is {any}", .{e1f});
-            // std.debug.print("\n field is {s} ", .{er.name});
+            // std.debug.print("\n DBunit len is {any}", .{e1f.len});
             inline for (e1f) |er| {
                 if (comptime std.mem.eql(u8, er.name, "id")) {
                     continue;
                 }
-                std.debug.print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
+                // std.debug.print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
                 if (@field(v, er.name)) |val| {
-                    std.debug.print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
+                    // std.debug.print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
                     @field(item, er.name) = val;
-                    std.debug.print("\n updated as {any}", .{@field(item, er.name)});
+                    // std.debug.print("\n updated as {any}", .{@field(item, er.name)});
                 }
                 std.debug.print("\n ", .{});
             }
-            std.debug.print("\n updated => {any}", .{item});
+            std.debug.print(" updated as => ", .{});
+            log(item);
             std.debug.print("\n ", .{});
             return self.map.put(id, item);
         }
@@ -77,7 +76,6 @@ fn JsonDB(comptime DBUnit: type) type {
                     data: *DBUnit,
                     pub usingnamespace Logger(.{});
                 };
-
                 var data: logr = .{
                     .id = item.value_ptr.id,
                     .data = item.value_ptr,
@@ -85,8 +83,8 @@ fn JsonDB(comptime DBUnit: type) type {
 
                 std.debug.print("\n", .{});
                 data.log();
-                log(@TypeOf(item.value_ptr));
-                log(item.value_ptr);
+                // log(@TypeOf(item.value_ptr));
+                // log(item.value_ptr);
                 std.debug.print("\n", .{});
                 std.debug.print("\n", .{});
             }
@@ -100,27 +98,18 @@ pub fn main() !void {
     const allocator = arena.allocator();
     var store = try JsonDB(Todo).init(allocator);
     defer store.deinit();
-    //     try store.set( .{
-    //         .id = 42,
-    //         .title = "Fix kitchen sink",
-    //         .name = "hello",
-    //         .age = 12
-    //     });
+    try store.set(.{ .id = 42, .title = "Fix kitchen sink", .name = "hello", .age = 12 });
 
-    //    try store.set(.{
-    //         .id = 13,
-    //         .isAdult = true
-    //     });
+    try store.set(.{ .id = 13, .isAdult = true });
 
-    // store.print();
     try store.set(.{
         .id = 13,
         .age = 22,
         .name = "friday",
         .isAdult = true,
     });
-    // try store.update(.{ .id = 13, .age = 12 });
+    try store.update(.{ .id = 13, .age = 12, .name = "hello", .title = "Be 3p1c h4x0r", .isAdult = true });
+    try store.update(.{ .id = 13, .age = 62 });
     // store.print();
-    // try store.update(.{ .id = 13, .age = 12, .name = "hello", .title = "Be 3p1c h4x0r", .isAdult = true });
-    store.print();
+    // store.print();
 }
