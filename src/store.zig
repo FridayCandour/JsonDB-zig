@@ -6,22 +6,32 @@ const Logger = ZigLogger.Logger;
 const log = ZigLogger.log;
 
 const Todo = struct {
-    id: u64,
+    id: ?u64 = null,
     title: ?[]const u8 = null,
     name: ?[]const u8 = null,
     age: ?u64 = null,
     isAdult: ?bool = null,
 };
-
+// const JsonDBPropsType = struct { log: ?bool = false, name: []const u8, lastID: ?u64 = 0 };
+const setup = struct {
+    name: []const u8,
+    log: bool,
+};
 fn JsonDB(comptime DBUnit: type) type {
     // TODO
     return struct {
         allocator: std.mem.Allocator,
+        name: ?[]const u8 = null,
+        log: ?bool = null,
+        lastID: ?u64 = null,
         map: std.AutoArrayHashMap(u64, DBUnit),
         const Self = @This();
-        fn init(allocator: std.mem.Allocator) !*Self {
+        fn init(allocator: std.mem.Allocator, JsonDBProps: setup) !*Self {
             var todos = try allocator.create(Self);
             todos.* = .{
+                .lastID = 0,
+                .name = JsonDBProps.name,
+                .log = JsonDBProps.log,
                 .allocator = allocator,
                 .map = std.AutoArrayHashMap(u64, DBUnit).init(allocator),
             };
@@ -31,48 +41,82 @@ fn JsonDB(comptime DBUnit: type) type {
             self.map.deinit();
             self.allocator.destroy(self);
         }
-        fn get(self: *Self, k: u64) ?DBUnit {
-            return self.map.get(k);
+        fn get(self: *Self, k: ?u64) ?DBUnit {
+            if (k) |key| {
+                return self.map.get(key);
+            }
+            return null;
         }
         fn set(self: *Self, v: DBUnit) !void {
-            const k = v.id;
-            const item = self.map.get(k);
-            if (item == null) {
-                return self.map.put(k, v);
+            var k: u64 = self.map.count() + 1;
+            if (self.map.count() == 0) {
+                k = 0;
+            } else {
+                k = k - 1;
             }
-            return;
+            try self.map.put(k, v);
+            return self.update(.{ .id = k });
         }
-        fn save(self: *Self) !void {
+        fn save(self: *Self) void {
+            log(.{ .name = "wow" });
             // TODO: write a fn to save to disk
-            return self.map;
+            self.print();
         }
         fn update(self: *Self, v: DBUnit) !void {
-            const id = v.id;
+            const id = v.id orelse return;
             var item = self.map.get(id) orelse return;
             const e1f = comptime fields(DBUnit);
-            // std.debug.print("\n DBunit len is {any}", .{e1f.len});
+            // print("\n DBunit len is {any}", .{e1f.len});
             inline for (e1f) |er| {
-                if (comptime std.mem.eql(u8, er.name, "id")) {
-                    continue;
-                }
-                // std.debug.print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
+                // if (comptime std.mem.eql(u8, er.name, "id")) {
+                //     continue;
+                // }
+                // print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
                 if (@field(v, er.name)) |val| {
-                    // std.debug.print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
+                    // print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
                     @field(item, er.name) = val;
-                    // std.debug.print("\n updated as {any}", .{@field(item, er.name)});
+                    // print("\n updated as {any}", .{@field(item, er.name)});
                 }
-                std.debug.print("\n ", .{});
             }
-            std.debug.print(" updated as => ", .{});
-            log(item);
-            std.debug.print("\n ", .{});
+            if (self.log) |lo| {
+                print("\n ", .{});
+                if (lo) {
+                    print(" updated as => ", .{});
+                    log(item);
+                }
+            }
             return self.map.put(id, item);
         }
-        fn print(self: *Self) void {
+        fn findAll(self: *Self, v: DBUnit) !void {
+            const id = v.id orelse return;
+            var item = self.map.get(id) orelse return;
+            const e1f = comptime fields(DBUnit);
+            // print("\n DBunit len is {any}", .{e1f.len});
+            inline for (e1f) |er| {
+                // if (comptime std.mem.eql(u8, er.name, "id")) {
+                //     continue;
+                // }
+                // print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
+                if (@field(v, er.name)) |val| {
+                    // print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
+                    @field(item, er.name) = val;
+                    // print("\n updated as {any}", .{@field(item, er.name)});
+                }
+            }
+            if (self.log) |lo| {
+                print("\n ", .{});
+                if (lo) {
+                    print(" updated as => ", .{});
+                    log(item);
+                }
+            }
+            return self.map.put(id, item);
+        }
+        fn logDB(self: *Self) void {
             var it = self.map.iterator();
             while (it.next()) |item| {
                 const logr = struct {
-                    id: u64,
+                    id: ?u64,
                     data: *DBUnit,
                     pub usingnamespace Logger(.{});
                 };
@@ -80,14 +124,68 @@ fn JsonDB(comptime DBUnit: type) type {
                     .id = item.value_ptr.id,
                     .data = item.value_ptr,
                 };
-
-                std.debug.print("\n", .{});
+                print("\n", .{});
                 data.log();
                 // log(@TypeOf(item.value_ptr));
                 // log(item.value_ptr);
-                std.debug.print("\n", .{});
-                std.debug.print("\n", .{});
+                print("\n", .{});
             }
+        }
+        fn find(self: *Self, v: DBUnit) !void {
+            //
+            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            defer std.debug.assert(!gpa.deinit());
+            var allocator = gpa.allocator();
+            var itemList = std.ArrayList(DBUnit).init(allocator);
+            defer itemList.deinit();
+            //
+            var it = self.map.iterator();
+            const e1f = comptime fields(DBUnit);
+            while (it.next()) |item| {
+                inline for (e1f) |er| {
+                    // log(@field(item.value_ptr, er.name));
+                    const field = @field(v,  er.name);
+                    const A = @TypeOf(field);
+                    switch (@typeInfo(A)) {
+                        .Optional => {
+                            const B = @field(@typeInfo(A), "Optional");
+                            switch (@typeInfo(B.child)) {
+                                .Pointer => {
+                                    if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
+                                        log(item.value_ptr);
+                                        try itemList.append(item.value_ptr);
+                                    }
+                                },
+                                else => {
+                                    if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
+                                        // try itemList.append(item.value_ptr);
+                                        // print("\n {any} \n", .{@field(v, er.name)});
+                                    }
+                                },
+                            }
+                        },
+                        .Pointer => {
+                            if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
+                                // log(@field(, er.name));item.value_ptr
+                                // try itemList.append(item.value_ptr);
+                            }
+                        },
+                        else => {
+                            if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
+                                // try itemList.append(item.value_ptr);
+                                // print("\n {any} \n", .{@field(v, er.name)});
+                            }
+                        },
+                    }
+                }
+            }
+            print("\n", .{});
+        }
+        fn findByID(self: *Self, k: ?u64) ?DBUnit {
+            if (k) |key| {
+                return self.map.get(key);
+            }
+            return null;
         }
     };
 }
@@ -96,20 +194,21 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
-    var store = try JsonDB(Todo).init(allocator);
+    const databaseParams = .{ .name = "TodoDB", .log = false };
+    var store = try JsonDB(Todo).init(allocator, databaseParams);
+    // defer store.save();
     defer store.deinit();
-    try store.set(.{ .id = 42, .title = "Fix kitchen sink", .name = "hello", .age = 12 });
-
-    try store.set(.{ .id = 13, .isAdult = true });
-
-    try store.set(.{
-        .id = 13,
-        .age = 22,
-        .name = "friday",
-        .isAdult = true,
-    });
-    try store.update(.{ .id = 13, .age = 12, .name = "hello", .title = "Be 3p1c h4x0r", .isAdult = true });
-    try store.update(.{ .id = 13, .age = 62 });
+    try store.set(.{ .title = "Fix kitchen sink", .name = "hello", .age = 12 });
+    // log(a);
+    try store.set(.{ .isAdult = true });
+    // try store.set(.{
+    //     .age = 22,
+    //     .name = "friday",
+    //     .isAdult = true,
+    // });
+    try store.update(.{ .id = 0, .age = 12, .name = "friday", .title = "Be 3p1c h4x0r", .isAdult = true });
+    // try store.update(.{ .id = 1, .age = 62 });
     // store.print();
-    // store.print();
+    try store.find(.{ .age = 12, .name = "friday" });
+    // log(store.get(0));
 }
