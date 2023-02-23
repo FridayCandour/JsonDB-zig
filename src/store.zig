@@ -201,9 +201,6 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!gpa.deinit());
     var findListallocator = gpa.allocator();
-    defer  _ = gpa.deinit();
-    defer std.debug.assert(!gpa.deinit());
-    //
 
     try store.set(.{ .title = "Fix kitchen sink", .name = "hello", .age = 12 });
     // log(a);
@@ -218,6 +215,7 @@ pub fn main() !void {
     try store.update(.{ .id = 1, .age = 62 });
     // store.print();
     const items = try store.find(findListallocator, .{ .age = 12, .name = "friday" });
-    print("{any}", .{items});
+    defer findListallocator.free(items);
+    print("{any}\n", .{items});
     // items.deinit();
 }
