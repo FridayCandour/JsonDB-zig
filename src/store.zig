@@ -175,9 +175,7 @@ fn JsonDB(comptime DBUnit: type) type {
                     }
                 }
             }
-            // log(findList.items);
             print("\n {any}", .{findList.items});
-            // return findList.items;
             return findList.toOwnedSlice();
         }
         fn findByID(self: *Self, k: ?u64) ?DBUnit {
@@ -203,8 +201,8 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!gpa.deinit());
     var findListallocator = gpa.allocator();
+    defer  _ = gpa.deinit();
     defer std.debug.assert(!gpa.deinit());
-
     //
 
     try store.set(.{ .title = "Fix kitchen sink", .name = "hello", .age = 12 });
@@ -216,12 +214,10 @@ pub fn main() !void {
         .isAdult = true,
     });
     try store.update(.{ .id = 0, .age = 12, .name = "friday", .title = "Be 3p1c h4x0r", .isAdult = true });
-    // try store.update(.{ .id = 1, .age = 62 });
+    // log(store.get(0));
+    try store.update(.{ .id = 1, .age = 62 });
     // store.print();
     const items = try store.find(findListallocator, .{ .age = 12, .name = "friday" });
     print("{any}", .{items});
     // items.deinit();
-    // log()
-    // log(items);
-    // log(store.get(0));
 }
