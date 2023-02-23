@@ -134,12 +134,10 @@ fn JsonDB(comptime DBUnit: type) type {
         fn find(self: *Self, Alloc: std.mem.Allocator, v: DBUnit) ![]const DBUnit {
             var findList = std.ArrayList(Todo).init(Alloc);
             errdefer findList.deinit();
-
             var it = self.map.iterator();
             const e1f = comptime fields(DBUnit);
             while (it.next()) |item| {
                 inline for (e1f) |er| {
-                    // log(@field(item.value_ptr, er.name));
                     const field = @field(v, er.name);
                     const A = @TypeOf(field);
                     switch (@typeInfo(A)) {
@@ -148,14 +146,14 @@ fn JsonDB(comptime DBUnit: type) type {
                             switch (@typeInfo(B.child)) {
                                 .Pointer => {
                                     if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
-                                        // log(item.value_ptr);
                                         try findList.append(item.value_ptr.*);
+                                        continue;
                                     }
                                 },
                                 else => {
                                     if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
                                         try findList.append(item.value_ptr.*);
-                                        // print("\n {any} \n", .{@field(v, er.name)});
+                                        continue;
                                     }
                                 },
                             }
@@ -163,19 +161,18 @@ fn JsonDB(comptime DBUnit: type) type {
                         .Pointer => {
                             if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
                                 try findList.append(item.value_ptr.*);
-                                // log(@field(, er.name));item.value_ptr
+                                        continue;
                             }
                         },
                         else => {
                             if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
                                 try findList.append(item.value_ptr.*);
-                                // print("\n {any} \n", .{@field(v, er.name)});
+                                        continue;
                             }
                         },
                     }
                 }
             }
-            print("\n {any}", .{findList.items});
             return findList.toOwnedSlice();
         }
         fn findByID(self: *Self, k: ?u64) ?DBUnit {
@@ -194,14 +191,13 @@ pub fn main() !void {
     const allocator = arena.allocator();
     const databaseParams = .{ .name = "TodoDB", .log = false };
     var store = try JsonDB(Todo).init(allocator, databaseParams);
-    // defer store.save();
     defer store.deinit();
 
     // for DB.find
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!gpa.deinit());
     var findListallocator = gpa.allocator();
-    defer  _ = gpa.deinit();
+    defer _ = gpa.deinit();
     defer std.debug.assert(!gpa.deinit());
     //
 
@@ -218,6 +214,8 @@ pub fn main() !void {
     try store.update(.{ .id = 1, .age = 62 });
     // store.print();
     const items = try store.find(findListallocator, .{ .age = 12, .name = "friday" });
-    print("{any}", .{items});
-    // items.deinit();
+    for (items) |item |{
+        log(item);
+    }
+    print("\n \n", .{});
 }
