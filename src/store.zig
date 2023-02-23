@@ -147,13 +147,13 @@ fn JsonDB(comptime DBUnit: type) type {
                                 .Pointer => {
                                     if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
                                         try findList.append(item.value_ptr.*);
-                                        continue;
+                                        // continue;
                                     }
                                 },
                                 else => {
                                     if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
                                         try findList.append(item.value_ptr.*);
-                                        continue;
+                                        // continue;
                                     }
                                 },
                             }
@@ -161,13 +161,13 @@ fn JsonDB(comptime DBUnit: type) type {
                         .Pointer => {
                             if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
                                 try findList.append(item.value_ptr.*);
-                                        continue;
+                                continue;
                             }
                         },
                         else => {
                             if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
                                 try findList.append(item.value_ptr.*);
-                                        continue;
+                                continue;
                             }
                         },
                     }
@@ -197,9 +197,6 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!gpa.deinit());
     var findListallocator = gpa.allocator();
-    defer _ = gpa.deinit();
-    defer std.debug.assert(!gpa.deinit());
-    //
 
     try store.set(.{ .title = "Fix kitchen sink", .name = "hello", .age = 12 });
     // log(a);
@@ -214,8 +211,9 @@ pub fn main() !void {
     try store.update(.{ .id = 1, .age = 62 });
     // store.print();
     const items = try store.find(findListallocator, .{ .age = 12, .name = "friday" });
-    for (items) |item |{
+    defer findListallocator.free(items);
+    for (items) |item| {
         log(item);
     }
-    print("\n \n", .{});
+    print("\n \n\n", .{});
 }
