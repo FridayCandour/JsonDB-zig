@@ -131,20 +131,16 @@ fn JsonDB(comptime DBUnit: type) type {
                 print("\n", .{});
             }
         }
-        fn find(self: *Self, v: DBUnit) !void {
-            //
-            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-            defer std.debug.assert(!gpa.deinit());
-            var allocator = gpa.allocator();
-            var itemList = std.ArrayList(DBUnit).init(allocator);
-            defer itemList.deinit();
-            //
+        fn find(self: *Self, Alloc: std.mem.Allocator, v: DBUnit) ![]const DBUnit {
+            var findList = std.ArrayList(Todo).init(Alloc);
+            errdefer findList.deinit();
+
             var it = self.map.iterator();
             const e1f = comptime fields(DBUnit);
             while (it.next()) |item| {
                 inline for (e1f) |er| {
                     // log(@field(item.value_ptr, er.name));
-                    const field = @field(v,  er.name);
+                    const field = @field(v, er.name);
                     const A = @TypeOf(field);
                     switch (@typeInfo(A)) {
                         .Optional => {
@@ -152,13 +148,13 @@ fn JsonDB(comptime DBUnit: type) type {
                             switch (@typeInfo(B.child)) {
                                 .Pointer => {
                                     if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
-                                        log(item.value_ptr);
-                                        try itemList.append(item.value_ptr);
+                                        // log(item.value_ptr);
+                                        try findList.append(item.value_ptr.*);
                                     }
                                 },
                                 else => {
                                     if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
-                                        // try itemList.append(item.value_ptr);
+                                        try findList.append(item.value_ptr.*);
                                         // print("\n {any} \n", .{@field(v, er.name)});
                                     }
                                 },
@@ -166,20 +162,23 @@ fn JsonDB(comptime DBUnit: type) type {
                         },
                         .Pointer => {
                             if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
+                                try findList.append(item.value_ptr.*);
                                 // log(@field(, er.name));item.value_ptr
-                                // try itemList.append(item.value_ptr);
                             }
                         },
                         else => {
                             if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
-                                // try itemList.append(item.value_ptr);
+                                try findList.append(item.value_ptr.*);
                                 // print("\n {any} \n", .{@field(v, er.name)});
                             }
                         },
                     }
                 }
             }
-            print("\n", .{});
+            // log(findList.items);
+            print("\n {any}", .{findList.items});
+            // return findList.items;
+            return findList.toOwnedSlice();
         }
         fn findByID(self: *Self, k: ?u64) ?DBUnit {
             if (k) |key| {
@@ -191,6 +190,7 @@ fn JsonDB(comptime DBUnit: type) type {
 }
 
 pub fn main() !void {
+    // for DB
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -198,17 +198,30 @@ pub fn main() !void {
     var store = try JsonDB(Todo).init(allocator, databaseParams);
     // defer store.save();
     defer store.deinit();
+
+    // for DB.find
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(!gpa.deinit());
+    var findListallocator = gpa.allocator();
+    defer std.debug.assert(!gpa.deinit());
+
+    //
+
     try store.set(.{ .title = "Fix kitchen sink", .name = "hello", .age = 12 });
     // log(a);
     try store.set(.{ .isAdult = true });
-    // try store.set(.{
-    //     .age = 22,
-    //     .name = "friday",
-    //     .isAdult = true,
-    // });
+    try store.set(.{
+        .age = 22,
+        .name = "friday",
+        .isAdult = true,
+    });
     try store.update(.{ .id = 0, .age = 12, .name = "friday", .title = "Be 3p1c h4x0r", .isAdult = true });
     // try store.update(.{ .id = 1, .age = 62 });
     // store.print();
-    try store.find(.{ .age = 12, .name = "friday" });
+    const items = try store.find(findListallocator, .{ .age = 12, .name = "friday" });
+    print("{any}", .{items});
+    // items.deinit();
+    // log()
+    // log(items);
     // log(store.get(0));
 }
