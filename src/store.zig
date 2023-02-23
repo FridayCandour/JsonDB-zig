@@ -1,5 +1,5 @@
 const std = @import("std");
-const print = std.debug.print;
+const printOut = std.debug.print;
 const fields = std.meta.fields;
 const ZigLogger = @import("logger.zig/src/main.zig");
 const Logger = ZigLogger.Logger;
@@ -62,57 +62,30 @@ fn JsonDB(comptime DBUnit: type) type {
             // TODO: write a fn to save to disk
             self.print();
         }
+        fn drop(self: *Self) void {
+            log(.{ .name = "wow" });
+            // TODO: write a fn to save to disk
+            self.print();
+        }
         fn update(self: *Self, v: DBUnit) !void {
             const id = v.id orelse return;
             var item = self.map.get(id) orelse return;
             const e1f = comptime fields(DBUnit);
-            // print("\n DBunit len is {any}", .{e1f.len});
             inline for (e1f) |er| {
-                // if (comptime std.mem.eql(u8, er.name, "id")) {
-                //     continue;
-                // }
-                // print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
                 if (@field(v, er.name)) |val| {
-                    // print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
                     @field(item, er.name) = val;
-                    // print("\n updated as {any}", .{@field(item, er.name)});
                 }
             }
             if (self.log) |lo| {
-                print("\n ", .{});
+                printOut("\n ", .{});
                 if (lo) {
-                    print(" updated as => ", .{});
+                    printOut(" updated as => ", .{});
                     log(item);
                 }
             }
             return self.map.put(id, item);
         }
-        fn findAll(self: *Self, v: DBUnit) !void {
-            const id = v.id orelse return;
-            var item = self.map.get(id) orelse return;
-            const e1f = comptime fields(DBUnit);
-            // print("\n DBunit len is {any}", .{e1f.len});
-            inline for (e1f) |er| {
-                // if (comptime std.mem.eql(u8, er.name, "id")) {
-                //     continue;
-                // }
-                // print("\n incoming values --- {s} {?any} ", .{ er.name, @field(v, er.name) });
-                if (@field(v, er.name)) |val| {
-                    // print("\n updating key {s} with value {any}", .{ er.name, @field(v, er.name) });
-                    @field(item, er.name) = val;
-                    // print("\n updated as {any}", .{@field(item, er.name)});
-                }
-            }
-            if (self.log) |lo| {
-                print("\n ", .{});
-                if (lo) {
-                    print(" updated as => ", .{});
-                    log(item);
-                }
-            }
-            return self.map.put(id, item);
-        }
-        fn logDB(self: *Self) void {
+        fn print(self: *Self) void {
             var it = self.map.iterator();
             while (it.next()) |item| {
                 const logr = struct {
@@ -124,11 +97,11 @@ fn JsonDB(comptime DBUnit: type) type {
                     .id = item.value_ptr.id,
                     .data = item.value_ptr,
                 };
-                print("\n", .{});
+                printOut("\n", .{});
                 data.log();
                 // log(@TypeOf(item.value_ptr));
                 // log(item.value_ptr);
-                print("\n", .{});
+                printOut("\n", .{});
             }
         }
         fn find(self: *Self, Alloc: std.mem.Allocator, v: DBUnit) ![]const DBUnit {
@@ -136,7 +109,7 @@ fn JsonDB(comptime DBUnit: type) type {
             errdefer findList.deinit();
             var it = self.map.iterator();
             const e1f = comptime fields(DBUnit);
-            while (it.next()) |item| {
+            mainLoop: while (it.next()) |item| {
                 inline for (e1f) |er| {
                     const field = @field(v, er.name);
                     const A = @TypeOf(field);
@@ -145,41 +118,35 @@ fn JsonDB(comptime DBUnit: type) type {
                             const B = @field(@typeInfo(A), "Optional");
                             switch (@typeInfo(B.child)) {
                                 .Pointer => {
-                                    if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
+                                    if (@field(v, er.name) != null and std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
                                         try findList.append(item.value_ptr.*);
-                                        // continue;
+                                        continue :mainLoop;
                                     }
                                 },
                                 else => {
-                                    if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
+                                    if (@field(v, er.name) != null and @field(v, er.name) == @field(item.value_ptr, er.name)) {
                                         try findList.append(item.value_ptr.*);
-                                        // continue;
+                                        continue :mainLoop;
                                     }
                                 },
                             }
                         },
                         .Pointer => {
-                            if (std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
+                            if (@field(v, er.name) != null and std.meta.eql(@field(v, er.name), @field(item.value_ptr, er.name))) {
                                 try findList.append(item.value_ptr.*);
-                                continue;
+                                continue :mainLoop;
                             }
                         },
                         else => {
-                            if (@field(v, er.name) == @field(item.value_ptr, er.name)) {
+                            if (@field(v, er.name) != null and @field(v, er.name) == @field(item.value_ptr, er.name)) {
                                 try findList.append(item.value_ptr.*);
-                                continue;
+                                continue :mainLoop;
                             }
                         },
                     }
                 }
             }
             return findList.toOwnedSlice();
-        }
-        fn findByID(self: *Self, k: ?u64) ?DBUnit {
-            if (k) |key| {
-                return self.map.get(key);
-            }
-            return null;
         }
     };
 }
@@ -198,22 +165,25 @@ pub fn main() !void {
     defer std.debug.assert(!gpa.deinit());
     var findListallocator = gpa.allocator();
 
-    try store.set(.{ .title = "Fix kitchen sink", .name = "hello", .age = 12 });
-    // log(a);
-    try store.set(.{ .isAdult = true });
+    try store.set(.{ .title = "Fix kitchen sink", .name = "choir", .age = 1 });
+    try store.set(.{ .age = 8, .name = "zig" });
     try store.set(.{
         .age = 22,
         .name = "friday",
         .isAdult = true,
     });
-    try store.update(.{ .id = 0, .age = 12, .name = "friday", .title = "Be 3p1c h4x0r", .isAdult = true });
-    // log(store.get(0));
-    try store.update(.{ .id = 1, .age = 62 });
-    // store.print();
-    const items = try store.find(findListallocator, .{ .age = 12, .name = "friday" });
+    try store.set(.{
+        .age = 9,
+        .name = "peter",
+        .isAdult = false,
+    });
+    try store.update(.{ .id = 0, .age = 12, .name = "friday", .title = "Believe", .isAdult = true });
+    store.print();
+    log(store.get(0));
+    const items = try store.find(findListallocator, .{ .age = 9, .name = "friday" });
     defer findListallocator.free(items);
     for (items) |item| {
         log(item);
     }
-    print("\n \n\n", .{});
+    printOut("\n \n\n", .{});
 }
